@@ -1,4 +1,3 @@
-require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
@@ -7,50 +6,63 @@ const app = express();
 app.use(bodyParser.json());
 app.use(cors());
 
-// Senha do administrador, protegida no backend
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+const admin = { password: '1234' }; // Senha do admin (use uma solução segura no futuro)
 
-// Armazena os números reservados (substitua isso por um banco de dados em produção)
-const reservedNumbers = {};
+const numbers = {};
 
-// Rota para autenticação do administrador
+// Endpoint para login do admin
 app.post('/admin/login', (req, res) => {
     const { password } = req.body;
-
-    if (password === ADMIN_PASSWORD) {
-        res.status(200).send({ success: true, message: 'Autenticação bem-sucedida!' });
-    } else {
-        res.status(401).send({ success: false, message: 'Senha incorreta!' });
+    if (password === admin.password) {
+        return res.json({ success: true, message: 'Login realizado com sucesso!' });
     }
+    return res.status(401).json({ success: false, message: 'Senha inválida.' });
 });
 
-// Rota para recuperar números reservados
+// Endpoint para obter números reservados
 app.get('/numbers', (req, res) => {
-    const numbers = Object.entries(reservedNumbers).map(([number, details]) => ({
-        number,
-        ...details,
-    }));
-    res.status(200).json(numbers);
+    res.json(numbers);
 });
 
-// Rota para reservar números
-app.post('/reserve', (req, res) => {
-    const { name, numbers } = req.body;
+// Endpoint para reservar números
+app.post('/numbers/reserve', (req, res) => {
+    const { name, selectedNumbers } = req.body;
 
-    const alreadyReserved = numbers.filter(number => reservedNumbers[number]);
+    // Verifica se números já estão reservados
+    const alreadyReserved = selectedNumbers.filter(num => numbers[num]);
     if (alreadyReserved.length > 0) {
-        return res.status(400).json({
-            success: false,
-            message: `Os números ${alreadyReserved.join(', ')} já estão reservados.`,
-        });
+        return res.status(400).json({ success: false, message: `Números já reservados: ${alreadyReserved.join(', ')}` });
     }
 
-    numbers.forEach(number => {
-        reservedNumbers[number] = { name, paid: false };
+    // Reserva os números
+    selectedNumbers.forEach(num => {
+        numbers[num] = { name, paid: false };
     });
 
-    res.status(200).json({ success: true, message: 'Números reservados com sucesso!' });
+    res.json({ success: true, message: 'Números reservados com sucesso!' });
 });
 
-// Inicializar o servidor
-app.listen(3000, () => console.log('Servidor rodando em http://localhost:3000'));
+// Endpoint para marcar números como pagos
+app.post('/numbers/mark-paid', (req, res) => {
+    const { number } = req.body;
+    if (numbers[number]) {
+        numbers[number].paid = true;
+        return res.json({ success: true, message: 'Número marcado como pago.' });
+    }
+    return res.status(400).json({ success: false, message: 'Número não encontrado.' });
+});
+
+// Endpoint para excluir números
+app.delete('/numbers/:number', (req, res) => {
+    const number = req.params.number;
+    if (numbers[number]) {
+        delete numbers[number];
+        return res.json({ success: true, message: 'Número excluído com sucesso.' });
+    }
+    return res.status(400).json({ success: false, message: 'Número não encontrado.' });
+});
+
+const PORT = 3000;
+app.listen(PORT, () => {
+    console.log(`Servidor rodando na porta ${PORT}`);
+});

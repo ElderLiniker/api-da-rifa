@@ -1,3 +1,4 @@
+require('dotenv').config(); // Carrega as variáveis de ambiente do arquivo .env
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
@@ -11,12 +12,11 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-
 // Importa o objeto db com todos os modelos carregados
 const db = require('./models'); // Certifique-se de que o caminho está correto
 
-const admin = { password: '1234' }; // Senha do admin (use uma solução segura no futuro)
-const numbers = {};
+// Usa a senha do .env
+const admin = { password: process.env.ADMIN_PASSWORD }; 
 
 // Endpoint para login do admin
 app.post('/admin/login', (req, res) => {
@@ -32,20 +32,27 @@ app.post('/numbers/reserve', async (req, res) => {
     const { name, selectedNumbers } = req.body;
 
     try {
-        // Verificar se já estão reservados
+        if (!name || !selectedNumbers || !Array.isArray(selectedNumbers)) {
+            return res.status(400).json({ success: false, message: 'Nome e números são obrigatórios' });
+        }
+
+        // Verificar se os números já estão reservados
         const existingNumbers = await db.Number.findAll({
             where: { number: selectedNumbers }
         });
+
         if (existingNumbers.length > 0) {
             const reserved = existingNumbers.map(n => n.number);
             return res.status(400).json({ success: false, message: `Números já reservados: ${reserved.join(', ')}` });
         }
 
         // Criar novas reservas
-        await db.Number.bulkCreate(selectedNumbers.map(num => ({ number: num, name })));
+        const newNumbers = selectedNumbers.map(num => ({ number: num, name }));
+        await db.Number.bulkCreate(newNumbers);
 
         res.json({ success: true, message: 'Números reservados com sucesso!' });
     } catch (err) {
+        console.error("Erro ao reservar números:", err);
         res.status(500).json({ success: false, message: 'Erro no servidor', error: err });
     }
 });
@@ -115,13 +122,15 @@ app.post("/comprar-rifa", async (req, res) => {
     }
 });
 
-const sequelize = require('./config/database'); // Importa a conexão com o banco
+// Conexão com o banco de dados
+const sequelize = require('./config/database'); 
 
 // Sincroniza o banco de dados
 sequelize.sync()
     .then(() => console.log('Banco de dados sincronizado'))
     .catch(err => console.error('Erro ao sincronizar:', err));
 
+// Inicia o servidor
 const PORT = 3002;
 app.listen(PORT, () => {
     console.log(`Servidor rodando na porta ${PORT}`);

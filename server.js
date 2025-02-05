@@ -93,6 +93,37 @@ sequelize.sync()
     .then(() => console.log('Banco de dados sincronizado'))
     .catch(err => console.error('Erro ao sincronizar:', err));
 
+
+    const express = require("express");
+const { Rifa } = require("./models");
+
+
+
+app.post("/comprar-rifa", async (req, res) => {
+    try {
+        const { nome, numeros } = req.body;
+
+        // Verifica se algum número já está reservado
+        const existing = await Rifa.findAll({ where: { numero: numeros } });
+        if (existing.length > 0) {
+            const reservados = existing.map(r => r.numero);
+            return res.status(400).json({ error: `Os números ${reservados.join(", ")} já foram reservados.` });
+        }
+
+        // Salvar cada número no banco
+        const rifas = await Promise.all(numeros.map(numero =>
+            Rifa.create({ nome, numero })
+        ));
+
+        res.status(201).json(rifas);
+    } catch (error) {
+        console.error("Erro ao salvar:", error);
+        res.status(500).json({ error: "Erro ao salvar a rifa" });
+    }
+});
+
+
+
 const PORT = 3000;
 app.listen(PORT, () => {
     console.log(`Servidor rodando na porta ${PORT}`);

@@ -4,7 +4,13 @@ const cors = require('cors');
 
 const app = express();
 app.use(bodyParser.json());
-app.use(cors());
+
+app.use(cors({
+    origin: '*', // Permite acesso de qualquer origem
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 
 // Importa o objeto db com todos os modelos carregados
 const db = require('./models'); // Certifique-se de que o caminho está correto

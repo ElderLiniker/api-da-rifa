@@ -131,8 +131,7 @@ sequelize.sync()
     .catch(err => console.error('Erro ao sincronizar:', err));
 
 // Inicia o servidor
-const PORT = 3002;
-app.listen(PORT, '0.0.0.0', () => {
+const PORT = 8080;
+app.listen(PORT, () => {
     console.log(`Servidor rodando na porta ${PORT}`);
 });
-
